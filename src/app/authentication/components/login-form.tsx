@@ -1,39 +1,42 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import z from "zod";
+import { toast } from "sonner";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormMessage } from "@/components/ui/form";
+import { FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
+
+const loginSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, { message: "E-mail é obrigatório" })
+    .email({ message: "E-mail inválido" }),
+  password: z
+    .string()
+    .trim()
+    .min(8, { message: "A senha deve ter pelo menos 8 caracteres" }),
+});
 
 const LoginForm = () => {
-  const loginSchema = z.object({
-    email: z
-      .string()
-      .trim()
-      .min(1, { message: "E-mail é obrigatório" })
-      .email({ message: "E-mail inválido" }),
-    password: z
-      .string()
-      .min(8, { message: "A senha deve ter pelo menos 8 caracteres" }),
-  });
-
+  const router = useRouter();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -42,18 +45,40 @@ const LoginForm = () => {
     },
   });
 
-  function onSubmit(values: z.infer<typeof loginSchema>) {
-    console.log(values);
-  }
+  const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
+    await authClient.signIn.email(
+      {
+        email: values.email,
+        password: values.password,
+      },
+      {
+        onSuccess: () => {
+          router.push("/dashboard");
+        },
+        onError: () => {
+          toast.error("E-mail ou senha inválidos.");
+        },
+      },
+    );
+  };
+
+  const handleGoogleLogin = async () => {
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+      scopes: ["email", "profile"],
+    });
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Criar conta</CardTitle>
-        <CardDescription>Faça login para continuar</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>Faça login para continuar.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <FormField
               control={form.control}
               name="email"
@@ -61,7 +86,7 @@ const LoginForm = () => {
                 <FormItem>
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="Digite o seu e-mail" {...field} />
+                    <Input placeholder="Digite seu e-mail" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -76,20 +101,32 @@ const LoginForm = () => {
                   <FormControl>
                     <Input
                       placeholder="Digite sua senha"
-                      {...field}
                       type="password"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
-              Entrar
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
+          </CardContent>
+          <CardFooter>
+            <div className="w-full space-y-2">
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  "Entrar"
+                )}
+              </Button>
+            </div>
+          </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 };

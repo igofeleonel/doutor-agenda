@@ -32,7 +32,7 @@ export const sessionsTable = pgTable("sessions", {
   updatedAt: timestamp("updated_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  text: text("user_id")
+  userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
 });
@@ -41,7 +41,7 @@ export const accountsTable = pgTable("accounts", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
-  text: text("user_id")
+  userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
@@ -74,12 +74,12 @@ export const clinicsTable = pgTable("clinics", {
 });
 
 export const usersToClinicsTable = pgTable("users_to_clinics", {
-  text: text("user_id")
+  userId: text("user_id")
     .notNull()
-    .references(() => usersTable.id),
+    .references(() => usersTable.id, { onDelete: "cascade" }),
   clinicId: uuid("clinic_id")
     .notNull()
-    .references(() => clinicsTable.id),
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
@@ -89,8 +89,8 @@ export const usersToClinicsTable = pgTable("users_to_clinics", {
 export const usersToClinicsTableRelations = relations(
   usersToClinicsTable,
   ({ one }) => ({
-    text: one(usersTable, {
-      fields: [usersToClinicsTable.text],
+    user: one(usersTable, {
+      fields: [usersToClinicsTable.userId],
       references: [usersTable.id],
     }),
     clinic: one(clinicsTable, {

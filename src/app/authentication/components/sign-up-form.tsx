@@ -1,39 +1,44 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
-import z from "zod";
+import { toast } from "sonner";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormMessage } from "@/components/ui/form";
+import { FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
+
+const registerSchema = z.object({
+  name: z.string().trim().min(1, { message: "Nome é obrigatório" }),
+  email: z
+    .string()
+    .trim()
+    .min(1, { message: "E-mail é obrigatório" })
+    .email({ message: "E-mail inválido" }),
+  password: z
+    .string()
+    .trim()
+    .min(8, { message: "A senha deve ter pelo menos 8 caracteres" }),
+});
 
 const SignUpForm = () => {
-  const registerSchema = z.object({
-    name: z.string().trim().min(1, { message: "Nome é obrigatório" }),
-    email: z
-      .string()
-      .trim()
-      .min(1, { message: "E-mail é obrigatório" })
-      .email({ message: "E-mail inválido" }),
-    password: z
-      .string()
-      .min(8, { message: "A senha deve ter pelo menos 8 caracteres" }),
-  });
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -44,18 +49,32 @@ const SignUpForm = () => {
     },
   });
 
-  function onSubmit(values: z.infer<typeof registerSchema>) {
-    console.log(values);
-  }
+  const onSubmit = async (values: z.infer<typeof registerSchema>) => {
+    try {
+      await authClient.signUp.email({
+        email: values.email,
+        password: values.password,
+        name: values.name,
+      });
+
+      toast.success("Conta criada com sucesso!");
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Erro ao criar conta:", error);
+      toast.error("Erro ao criar conta. Verifique os dados e tente novamente.");
+    }
+  };
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Criar conta</CardTitle>
-        <CardDescription>Crie uma conta para continuar.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <CardHeader>
+            <CardTitle>Criar conta</CardTitle>
+            <CardDescription>Crie uma conta para continuar.</CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -63,12 +82,13 @@ const SignUpForm = () => {
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Digite o seu nome" {...field} />
+                    <Input placeholder="Digite seu nome" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="email"
@@ -76,12 +96,13 @@ const SignUpForm = () => {
                 <FormItem>
                   <FormLabel>E-mail</FormLabel>
                   <FormControl>
-                    <Input placeholder="Digite o seu e-mail" {...field} />
+                    <Input placeholder="Digite seu e-mail" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="password"
@@ -91,20 +112,31 @@ const SignUpForm = () => {
                   <FormControl>
                     <Input
                       placeholder="Digite sua senha"
-                      {...field}
                       type="password"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">
-              Criar conta
+          </CardContent>
+
+          <CardFooter>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Criar conta"
+              )}
             </Button>
-          </form>
-        </Form>
-      </CardContent>
+          </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 };
