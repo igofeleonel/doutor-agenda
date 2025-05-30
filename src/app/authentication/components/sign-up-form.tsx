@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,7 +37,6 @@ const registerSchema = z.object({
 
 const SignUpForm = () => {
   const router = useRouter();
-
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -62,8 +59,7 @@ const SignUpForm = () => {
         },
         onError: (ctx) => {
           if (ctx.error.code === "USER_ALREADY_EXISTS") {
-            toast.error("E-mail já cadastrado.");
-            return;
+            toast.error("E-mail já é cadastrado.");
           }
           toast.error("Erro ao criar conta.");
         },
