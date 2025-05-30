@@ -49,21 +49,27 @@ const SignUpForm = () => {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof registerSchema>) => {
-    try {
-      await authClient.signUp.email({
+  async function onSubmit(values: z.infer<typeof registerSchema>) {
+    await authClient.signUp.email(
+      {
         email: values.email,
         password: values.password,
         name: values.name,
-      });
-
-      toast.success("Conta criada com sucesso!");
-      router.push("/dashboard");
-    } catch (error: any) {
-      console.error("Erro ao criar conta:", error);
-      toast.error("Erro ao criar conta. Verifique os dados e tente novamente.");
-    }
-  };
+      },
+      {
+        onSuccess: () => {
+          router.push("/dashboard");
+        },
+        onError: (ctx) => {
+          if (ctx.error.code === "USER_ALREADY_EXISTS") {
+            toast.error("E-mail já cadastrado.");
+            return;
+          }
+          toast.error("Erro ao criar conta.");
+        },
+      },
+    );
+  }
 
   return (
     <Card>
