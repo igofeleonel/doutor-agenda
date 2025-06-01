@@ -59,7 +59,8 @@ const SignUpForm = () => {
         },
         onError: (ctx) => {
           if (ctx.error.code === "USER_ALREADY_EXISTS") {
-            toast.error("E-mail já é cadastrado.");
+            toast.error("E-mail já cadastrado.");
+            return;
           }
           toast.error("Erro ao criar conta.");
         },
@@ -75,7 +76,6 @@ const SignUpForm = () => {
             <CardTitle>Criar conta</CardTitle>
             <CardDescription>Crie uma conta para continuar.</CardDescription>
           </CardHeader>
-
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
@@ -90,7 +90,6 @@ const SignUpForm = () => {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="email"
@@ -104,7 +103,6 @@ const SignUpForm = () => {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="password"
@@ -123,7 +121,6 @@ const SignUpForm = () => {
               )}
             />
           </CardContent>
-
           <CardFooter>
             <Button
               type="submit"
