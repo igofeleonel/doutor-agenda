@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -13,7 +12,9 @@ const SignOutButton = () => {
       onClick={() =>
         authClient.signOut({
           fetchOptions: {
-            onSuccess: () => {},
+            onSuccess: () => {
+              router.push("/authentication");
+            },
           },
         })
       }
