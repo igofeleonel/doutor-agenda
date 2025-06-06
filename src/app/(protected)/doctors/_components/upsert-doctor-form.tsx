@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TrashIcon } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
@@ -81,11 +82,16 @@ const formSchema = z
   );
 
 interface UpsertDoctorFormProps {
+  isOpen: boolean;
   doctor?: typeof doctorsTable.$inferSelect;
   onSuccess?: () => void;
 }
 
-const UpsertDoctorForm = ({ doctor, onSuccess }: UpsertDoctorFormProps) => {
+const UpsertDoctorForm = ({
+  isOpen,
+  doctor,
+  onSuccess,
+}: UpsertDoctorFormProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     shouldUnregister: true,
     resolver: zodResolver(formSchema),
@@ -101,6 +107,23 @@ const UpsertDoctorForm = ({ doctor, onSuccess }: UpsertDoctorFormProps) => {
       availableToTime: doctor?.availableToTime ?? "",
     },
   });
+
+  useEffect(() => {
+    if (isOpen && doctor) {
+      form.reset({
+        name: doctor.name,
+        specialty: doctor.specialty,
+        appointmentPrice: doctor.appointmentPriceInCents / 100,
+        availableFromWeekDay: doctor.availableFromWeekDay.toString(),
+        availableToWeekDay: doctor.availableToWeekDay.toString(),
+        availableFromTime: doctor.availableFromTime,
+        availableToTime: doctor.availableToTime,
+      });
+    } else if (!isOpen) {
+      form.reset();
+    }
+  }, [isOpen, form, doctor]);
+
   const upsertDoctorAction = useAction(upsertDoctor, {
     onSuccess: () => {
       toast.success("Médico adicionado com sucesso.");
@@ -362,7 +385,7 @@ const UpsertDoctorForm = ({ doctor, onSuccess }: UpsertDoctorFormProps) => {
                       <SelectItem value="07:30:00">07:30</SelectItem>
                       <SelectItem value="08:00:00">08:00</SelectItem>
                       <SelectItem value="08:30:00">08:30</SelectItem>
-                      <SelectItem value="09:00:00">09:00</SelectItem>
+                      <SelectItem value="09:0:00">09:00</SelectItem>
                       <SelectItem value="09:30:00">09:30</SelectItem>
                       <SelectItem value="10:00:00">10:00</SelectItem>
                       <SelectItem value="10:30:00">10:30</SelectItem>
