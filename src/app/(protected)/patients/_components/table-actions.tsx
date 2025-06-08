@@ -1,4 +1,4 @@
-import { EditIcon, MoreVerticalIcon, TrashIcon } from "lucide-react";
+import { Edit, MoreVertical, Trash } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -56,20 +56,20 @@ const PatientsTableActions = ({ patient }: PatientsTableActionsProps) => {
         <DropdownMenu>
           <DropdownMenuTrigger>
             <Button variant="ghost" size="icon">
-              <MoreVerticalIcon className="h-4 w-4" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>{patient.name}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setUpsertDialogIsOpen(true)}>
-              <EditIcon />
+              <Edit className="mr-2 h-4 w-4" />
               Editar
             </DropdownMenuItem>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <TrashIcon />
+                  <Trash className="mr-2 h-4 w-4" />
                   Excluir
                 </DropdownMenuItem>
               </AlertDialogTrigger>
