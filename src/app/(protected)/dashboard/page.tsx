@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { and, count, eq, gte, lte, sum } from "drizzle-orm";
+import { and, count, eq, gte, lte, sql, sum } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -16,6 +16,7 @@ import { db } from "@/db";
 import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
+import RevenueChart from "./_components/appointments-chart";
 import { DatePicker } from "./_components/date-picker";
 import StatsCards from "./_components/stats-cards";
 
@@ -39,17 +40,21 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
     redirect("/clinic-form");
   }
 
-  const { from, to } = searchParams;
+  const now = new Date();
+  const defaultFrom = dayjs(now).startOf("day").format("YYYY-MM-DD");
+  const defaultTo = dayjs(now)
+    .add(1, "month")
+    .startOf("day")
+    .format("YYYY-MM-DD");
+
+  const fromParam = searchParams.from;
+  const toParam = searchParams.to;
 
   const isValidDate = (date: string | undefined) =>
     typeof date === "string" && !isNaN(new Date(date).getTime());
 
-  if (!isValidDate(from) || !isValidDate(to)) {
-    redirect(
-      `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs()
-        .add(1, "month")
-        .format("YYYY-MM-DD")}`,
-    );
+  if (!isValidDate(fromParam) || !isValidDate(toParam)) {
+    redirect(`/dashboard?from=${defaultFrom}&to=${defaultTo}`);
   }
 
   const [[totalRevenue], [totalAppointments], [totalPatients], [totalDoctors]] =
@@ -62,8 +67,8 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
         .where(
           and(
             eq(appointmentsTable.clinicId, session.user.clinic.id),
-            gte(appointmentsTable.date, new Date(from!)),
-            lte(appointmentsTable.date, new Date(to!)),
+            gte(appointmentsTable.date, new Date(fromParam!)),
+            lte(appointmentsTable.date, new Date(toParam!)),
           ),
         ),
 
@@ -75,8 +80,8 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
         .where(
           and(
             eq(appointmentsTable.clinicId, session.user.clinic.id),
-            gte(appointmentsTable.date, new Date(from!)),
-            lte(appointmentsTable.date, new Date(to!)),
+            gte(appointmentsTable.date, new Date(fromParam!)),
+            lte(appointmentsTable.date, new Date(toParam!)),
           ),
         ),
 
@@ -94,6 +99,29 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
         .from(doctorsTable)
         .where(eq(doctorsTable.clinicId, session.user.clinic.id)),
     ]);
+
+  const chartStartDate = dayjs(fromParam).startOf("day").toDate();
+  const chartEndDate = dayjs(toParam).endOf("day").toDate();
+
+  const dailyAppointmentsData = await db
+    .select({
+      date: sql<string>`DATE(${appointmentsTable.date})`.as("date"),
+      appointments: count(appointmentsTable.id),
+      revenue:
+        sql<number>`COALESCE(SUM(${appointmentsTable.appointmentPriceInCents}), 0)`.as(
+          "revenue",
+        ),
+    })
+    .from(appointmentsTable)
+    .where(
+      and(
+        eq(appointmentsTable.clinicId, session.user.clinic.id),
+        gte(appointmentsTable.date, chartStartDate),
+        lte(appointmentsTable.date, chartEndDate),
+      ),
+    )
+    .groupBy(sql`DATE(${appointmentsTable.date})`)
+    .orderBy(sql`DATE(${appointmentsTable.date})`);
 
   return (
     <PageContainer>
@@ -115,6 +143,9 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
           totalPatients={totalPatients.total}
           totalDoctors={totalDoctors.total}
         />
+        <div className="grid grid-cols-[2.25fr_1fr]">
+          <RevenueChart dailyAppointmentsData={dailyAppointmentsData} />
+        </div>
       </PageContent>
     </PageContainer>
   );
