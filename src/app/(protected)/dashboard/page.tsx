@@ -20,6 +20,7 @@ import RevenueChart from "./_components/appointments-chart";
 import { DatePicker } from "./_components/date-picker";
 import StatsCards from "./_components/stats-cards";
 import TopDoctors from "./_components/top-doctors";
+import TopSpecialties from "./_components/top-specialties";
 
 interface DashboardPageProps {
   searchParams: {
@@ -64,6 +65,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
     [totalPatients],
     [totalDoctors],
     topDoctors,
+    topSpecialties,
   ] = await Promise.all([
     db
       .select({ total: sum(appointmentsTable.appointmentPriceInCents) })
@@ -106,14 +108,30 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
         appointmentsTable,
         and(
           eq(appointmentsTable.doctorId, doctorsTable.id),
-          gte(appointmentsTable.date, new Date(from)),
-          lte(appointmentsTable.date, new Date(to)),
+          gte(appointmentsTable.date, from),
+          lte(appointmentsTable.date, to),
         ),
       )
       .where(eq(doctorsTable.clinicId, session.user.clinic.id))
       .groupBy(doctorsTable.id)
       .orderBy(desc(count(appointmentsTable.id)))
       .limit(10),
+    db
+      .select({
+        specialty: doctorsTable.specialty,
+        appointments: count(appointmentsTable.id),
+      })
+      .from(appointmentsTable)
+      .innerJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
+      .where(
+        and(
+          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          gte(appointmentsTable.date, from),
+          lte(appointmentsTable.date, to),
+        ),
+      )
+      .groupBy(doctorsTable.specialty)
+      .orderBy(desc(count(appointmentsTable.id))),
   ]);
 
   const chartStartDate = dayjs(from).startOf("day").toDate();
@@ -162,6 +180,10 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
         <div className="grid grid-cols-[2.25fr_1fr] gap-4">
           <RevenueChart dailyAppointmentsData={dailyAppointmentsData} />
           <TopDoctors doctors={topDoctors} />
+        </div>
+        <div className="grid grid-cols-[2.25fr_1fr] gap-4">
+          {/* Tabela */}
+          <TopSpecialties topSpecialties={topSpecialties} />
         </div>
       </PageContent>
     </PageContainer>
