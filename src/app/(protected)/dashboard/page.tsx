@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { and, count, eq, gte, lte, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, sql, sum } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -19,6 +19,7 @@ import { auth } from "@/lib/auth";
 import RevenueChart from "./_components/appointments-chart";
 import { DatePicker } from "./_components/date-picker";
 import StatsCards from "./_components/stats-cards";
+import TopDoctors from "./_components/top-doctors";
 
 interface DashboardPageProps {
   searchParams: {
@@ -47,61 +48,76 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
     .startOf("day")
     .format("YYYY-MM-DD");
 
-  const fromParam = searchParams.from;
-  const toParam = searchParams.to;
-
   const isValidDate = (date: string | undefined) =>
     typeof date === "string" && !isNaN(new Date(date).getTime());
 
-  if (!isValidDate(fromParam) || !isValidDate(toParam)) {
+  if (!isValidDate(searchParams.from) || !isValidDate(searchParams.to)) {
     redirect(`/dashboard?from=${defaultFrom}&to=${defaultTo}`);
   }
 
-  const [[totalRevenue], [totalAppointments], [totalPatients], [totalDoctors]] =
-    await Promise.all([
-      db
-        .select({
-          total: sum(appointmentsTable.appointmentPriceInCents),
-        })
-        .from(appointmentsTable)
-        .where(
-          and(
-            eq(appointmentsTable.clinicId, session.user.clinic.id),
-            gte(appointmentsTable.date, new Date(fromParam!)),
-            lte(appointmentsTable.date, new Date(toParam!)),
-          ),
+  const from = new Date(searchParams.from!);
+  const to = new Date(searchParams.to!);
+
+  const [
+    [totalRevenue],
+    [totalAppointments],
+    [totalPatients],
+    [totalDoctors],
+    topDoctors,
+  ] = await Promise.all([
+    db
+      .select({ total: sum(appointmentsTable.appointmentPriceInCents) })
+      .from(appointmentsTable)
+      .where(
+        and(
+          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          gte(appointmentsTable.date, from),
+          lte(appointmentsTable.date, to),
         ),
-
-      db
-        .select({
-          total: count(),
-        })
-        .from(appointmentsTable)
-        .where(
-          and(
-            eq(appointmentsTable.clinicId, session.user.clinic.id),
-            gte(appointmentsTable.date, new Date(fromParam!)),
-            lte(appointmentsTable.date, new Date(toParam!)),
-          ),
+      ),
+    db
+      .select({ total: count() })
+      .from(appointmentsTable)
+      .where(
+        and(
+          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          gte(appointmentsTable.date, from),
+          lte(appointmentsTable.date, to),
         ),
+      ),
+    db
+      .select({ total: count() })
+      .from(patientsTable)
+      .where(eq(patientsTable.clinicId, session.user.clinic.id)),
+    db
+      .select({ total: count() })
+      .from(doctorsTable)
+      .where(eq(doctorsTable.clinicId, session.user.clinic.id)),
+    db
+      .select({
+        id: doctorsTable.id,
+        name: doctorsTable.name,
+        avatarImageUrl: doctorsTable.avatarImageUrl,
+        specialty: doctorsTable.specialty,
+        appointments: count(appointmentsTable.id),
+      })
+      .from(doctorsTable)
+      .leftJoin(
+        appointmentsTable,
+        and(
+          eq(appointmentsTable.doctorId, doctorsTable.id),
+          gte(appointmentsTable.date, new Date(from)),
+          lte(appointmentsTable.date, new Date(to)),
+        ),
+      )
+      .where(eq(doctorsTable.clinicId, session.user.clinic.id))
+      .groupBy(doctorsTable.id)
+      .orderBy(desc(count(appointmentsTable.id)))
+      .limit(10),
+  ]);
 
-      db
-        .select({
-          total: count(),
-        })
-        .from(patientsTable)
-        .where(eq(patientsTable.clinicId, session.user.clinic.id)),
-
-      db
-        .select({
-          total: count(),
-        })
-        .from(doctorsTable)
-        .where(eq(doctorsTable.clinicId, session.user.clinic.id)),
-    ]);
-
-  const chartStartDate = dayjs(fromParam).startOf("day").toDate();
-  const chartEndDate = dayjs(toParam).endOf("day").toDate();
+  const chartStartDate = dayjs(from).startOf("day").toDate();
+  const chartEndDate = dayjs(to).endOf("day").toDate();
 
   const dailyAppointmentsData = await db
     .select({
@@ -143,8 +159,9 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
           totalPatients={totalPatients.total}
           totalDoctors={totalDoctors.total}
         />
-        <div className="grid grid-cols-[2.25fr_1fr]">
+        <div className="grid grid-cols-[2.25fr_1fr] gap-4">
           <RevenueChart dailyAppointmentsData={dailyAppointmentsData} />
+          <TopDoctors doctors={topDoctors} />
         </div>
       </PageContent>
     </PageContainer>
