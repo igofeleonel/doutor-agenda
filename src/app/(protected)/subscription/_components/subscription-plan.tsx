@@ -2,6 +2,7 @@
 
 import { loadStripe } from "@stripe/stripe-js";
 import { CheckCircle2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 
 import { createStripeCheckout } from "@/actions/create-stripe-checkout";
@@ -19,12 +20,15 @@ import { cn } from "@/lib/utils";
 interface SubscriptionPlanProps {
   active?: boolean;
   className?: string;
+  userEmail: string;
 }
 
 export default function SubscriptionPlan({
   active = false,
   className,
+  userEmail,
 }: SubscriptionPlanProps) {
+  const router = useRouter();
   const createStripeCheckoutAction = useAction(createStripeCheckout, {
     onSuccess: async ({ data }) => {
       if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -58,19 +62,23 @@ export default function SubscriptionPlan({
     createStripeCheckoutAction.execute();
   };
 
+  const handleManagePlanClick = () => {
+    router.push(
+      `${process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL_URL}?prefilled_email=${userEmail}`,
+    );
+  };
+
   return (
     <Card className={cn("w-full max-w-sm", className)}>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CardTitle className="text-xl">Essential</CardTitle>
-          {active && (
-            <Badge
-              variant="secondary"
-              className="bg-primary/10 text-primary hover:bg-primary/10"
-            >
-              Atual
-            </Badge>
-          )}
+          <CardTitle className="mr-auto text-xl">Essential</CardTitle>
+          <Badge
+            variant="secondary"
+            className="gap-[10px] bg-[#D1FAF0] px-[10px] py-[4px] text-[#00A180] hover:bg-[#D1FAF0]"
+          >
+            Atual
+          </Badge>
         </div>
         <CardDescription className="text-sm">
           Para profissionais autônomos ou pequenas clínicas
@@ -97,7 +105,7 @@ export default function SubscriptionPlan({
           <Button
             variant="outline"
             className="w-full"
-            onClick={active ? () => {} : handleSubscribeClick}
+            onClick={active ? handleManagePlanClick : handleSubscribeClick}
             disabled={createStripeCheckoutAction.isExecuting}
           >
             {createStripeCheckoutAction.isExecuting ? (
