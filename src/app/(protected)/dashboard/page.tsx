@@ -35,23 +35,21 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-
   if (!session?.user) {
     redirect("/authentication");
   }
-
   if (!session.user.clinic) {
     redirect("/clinic-form");
   }
-
+  if (!session.user.plan) {
+    redirect("/new-subscription");
+  }
   const { from, to } = await searchParams;
-
   if (!from || !to) {
     redirect(
       `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs().add(1, "month").format("YYYY-MM-DD")}`,
     );
   }
-
   const {
     totalRevenue,
     totalAppointments,
@@ -88,10 +86,10 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
       </PageHeader>
       <PageContent>
         <StatsCards
-          totalRevenue={totalRevenue?.total ? Number(totalRevenue.total) : null}
-          totalAppointments={totalAppointments?.total || 0}
-          totalPatients={totalPatients?.total || 0}
-          totalDoctors={totalDoctors?.total || 0}
+          totalRevenue={totalRevenue.total ? Number(totalRevenue.total) : null}
+          totalAppointments={totalAppointments.total}
+          totalPatients={totalPatients.total}
+          totalDoctors={totalDoctors.total}
         />
         <div className="grid grid-cols-[2.25fr_1fr] gap-4">
           <AppointmentsChart dailyAppointmentsData={dailyAppointmentsData} />

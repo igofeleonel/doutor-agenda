@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/page-container";
 import { auth } from "@/lib/auth";
 
-import SubscriptionPlan from "./_components/subscription-plan";
+import { SubscriptionPlan } from "./_components/subscription-plan";
 
 const SubscriptionPage = async () => {
   const session = await auth.api.getSession({
@@ -22,6 +22,9 @@ const SubscriptionPage = async () => {
   }
   if (!session.user.clinic) {
     redirect("/clinic-form");
+  }
+  if (!session.user.plan) {
+    redirect("/new-subscription");
   }
   return (
     <PageContainer>

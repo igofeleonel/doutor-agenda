@@ -28,6 +28,9 @@ const DoctorsPage = async () => {
   if (!session.user.clinic) {
     redirect("/clinic-form");
   }
+  if (!session.user.clinic) {
+    redirect("/clinic-form")
+  }
   const doctors = await db.query.doctorsTable.findMany({
     where: eq(doctorsTable.clinicId, session.user.clinic.id),
   });
